@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "airportassetsmod:block/runway_sign" },
+    "facing=south": { "model": "airportassetsmod:block/runway_sign", "y": 180 },
+    "facing=west":  { "model": "airportassetsmod:block/runway_sign", "y": 270 },
+    "facing=east":  { "model": "airportassetsmod:block/runway_sign", "y": 90 }
+  }
+}
