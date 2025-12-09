@@ -21,6 +21,7 @@ public class ModCreativeTabs {
                             .icon(() -> new ItemStack(ModItems.RUNWAY_SIGN_ITEM.get()))
                             .displayItems((parameters, output) -> {
                                 output.accept(ModItems.RUNWAY_SIGN_ITEM.get());
+                                output.accept(ModItems.ILS_SIGN_ITEM.get());
                             })
                             .build());
 

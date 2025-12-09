@@ -13,6 +13,7 @@ public class ModItems {
             DeferredRegister.create(ForgeRegistries.ITEMS, AirportAssetsMod.MODID);
 
     public static final RegistryObject<Item> RUNWAY_SIGN_ITEM = ITEMS.register("runway_sign", () -> new BlockItem(ModBlocks.RUNWAY_SIGN.get(), new Item.Properties()));
+    public static final RegistryObject<Item> ILS_SIGN_ITEM = ITEMS.register("ils_sign", () -> new BlockItem(ModBlocks.ILS_SIGN.get(), new Item.Properties()));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

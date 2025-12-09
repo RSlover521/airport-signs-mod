@@ -2,7 +2,6 @@ package com.rslover521.airportassetsmod.registry;
 
 import com.rslover521.airportassetsmod.AirportAssetsMod;
 import com.rslover521.airportassetsmod.blockentity.RunwaySignBlockEntity;
-import com.rslover521.airportassetsmod.blocks.RunwaySignBlock;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;

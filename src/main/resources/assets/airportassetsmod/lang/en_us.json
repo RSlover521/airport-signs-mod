@@ -1,5 +1,6 @@
 {
   "block.airportassetsmod.runway_sign": "Runway Mandatory Sign",
-  "container.airportassets.runway_sign": "Runway Sign Editor",
-  "itemGroup.airportassets.airport_tab": "Airport Assets"
+  "block.airportassetsmod.ils_sign": "ILS Critical Area Sign",
+  "container.airportassetsmod.runway_sign": "Runway Sign Editor",
+  "itemGroup.airportassetsmod.airport_tab": "Airport Assets"
 }
