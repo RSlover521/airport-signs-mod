@@ -15,12 +15,11 @@ public class NetworkHandler {
             .simpleChannel();
 
     private static int id = 0;
-
     public static int id() { return id++; }
 
     public static void registerMessages() {
         CHANNEL.registerMessage(id(), RunwaySignUpdatePacket.class,
-                RunwaySignUpdatePacket :: encode,
+                RunwaySignUpdatePacket::encode,
                 RunwaySignUpdatePacket::decode,
                 RunwaySignUpdatePacket::handle);
     }

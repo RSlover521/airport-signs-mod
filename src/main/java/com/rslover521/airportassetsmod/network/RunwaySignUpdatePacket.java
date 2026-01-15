@@ -1,11 +1,9 @@
 package com.rslover521.airportassetsmod.network;
 
 import com.rslover521.airportassetsmod.blockentity.RunwaySignBlockEntity;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
@@ -30,18 +28,27 @@ public class RunwaySignUpdatePacket {
         return new RunwaySignUpdatePacket(pos, text);
     }
 
-    public static void handle(RunwaySignUpdatePacket pkt, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
+    public static void handle(RunwaySignUpdatePacket msg, Supplier<NetworkEvent.Context> sup) {
+        NetworkEvent.Context ctx = sup.get();
+
         ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-            if(player == null) return;
-            Level level = player.level();
-            BlockEntity be = level.getBlockEntity(pkt.pos);
-            if(be instanceof RunwaySignBlockEntity sign) {
-                sign.setRunway(pkt.text);
-                level.sendBlockUpdated(pkt.pos, level.getBlockState(pkt.pos), level.getBlockState(pkt.pos), 3);
+            if (ctx.getSender() != null) {
+                var player = ctx.getSender();
+                var level = player.level();
+                var be = level.getBlockEntity(msg.pos);
+                if (be instanceof RunwaySignBlockEntity sign) {
+                    sign.setRunway(msg.text);
+                }
+            } else {
+                var level = Minecraft.getInstance().level;
+                if (level == null) return;
+                var be = level.getBlockEntity(msg.pos);
+                if (be instanceof RunwaySignBlockEntity sign) {
+                    sign.setRunway(msg.text);
+                }
             }
         });
+
         ctx.setPacketHandled(true);
     }
 }

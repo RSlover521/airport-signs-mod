@@ -45,7 +45,7 @@ public class RunwaySignScreen extends Screen implements MenuAccess<RunwaySignMen
 
                     if (VALID.matcher(text).matches()) {
                         NetworkHandler.CHANNEL.sendToServer(
-                                new RunwaySignUpdatePacket(menu.getPos(), text)
+                                new RunwaySignUpdatePacket(menu.getBlockEntity().getBlockPos(), text)
                         );
                         onClose();
                     } else {
@@ -83,7 +83,7 @@ public class RunwaySignScreen extends Screen implements MenuAccess<RunwaySignMen
 
         // Text preview
         String text = input.getValue().toUpperCase();
-        if (text.isEmpty()) text = "16L";
+        if (text.isEmpty()) text = "";
 
         gfx.pose().pushPose();
         gfx.pose().translate(this.width / 2, py + 15, 0);
