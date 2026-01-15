@@ -1,4 +1,435 @@
 Todo:
     - fix the goddamn runway signs (could be renderer issue, network update issue, etc.)
     - fix textures and block models for both ILS and runway signs
-    - idk release when...
+    - IDK release when...
+
+    - I am a minecraft mod developer. Can you analyze the following code (this code is intended to make a runway sign block that works similarly as a vanilla oak sign where players can input the number of the runway, and it will show up on the sign)?
+    blockentity:
+    package com.rslover521.airportassetsmod.blockentity;
+
+    import com.rslover521.airportassetsmod.AirportAssetsMod;
+    import com.rslover521.airportassetsmod.registry.ModBlockEntities;
+    import net.minecraft.core.BlockPos;
+    import net.minecraft.nbt.CompoundTag;
+    import net.minecraft.world.level.block.entity.BlockEntity;
+    import net.minecraft.world.level.block.state.BlockState;
+
+    public class RunwaySignBlockEntity extends BlockEntity {
+        private String runway = "";
+
+        public RunwaySignBlockEntity(BlockPos pos, BlockState state) {
+            super(ModBlockEntities.RUNWAY_SIGN.get(), pos, state);
+        }
+
+        public String getRunway() {
+            return runway;
+        }
+
+        public void setRunway(String code) {
+            this.runway = code == null ? "" : code;
+            setChanged();
+
+            if (level != null && !level.isClientSide) {
+                AirportAssetsMod.LOGGER.debug("Updated RunwaySign at " + worldPosition + " to: " + runway);
+            }
+        }
+
+        @Override
+        public void load(CompoundTag tag) {
+            super.load(tag);
+            this.runway = tag.getString("Runway");
+        }
+
+        @Override
+        public void saveAdditional(CompoundTag tag) {
+            super.saveAdditional(tag);
+            tag.putString("Runway", runway);
+        }
+    }
+    block class:
+    package com.rslover521.airportassetsmod.blocks;
+
+    import com.rslover521.airportassetsmod.blockentity.RunwaySignBlockEntity;
+    import net.minecraft.core.BlockPos;
+    import net.minecraft.core.Direction;
+    import net.minecraft.network.chat.Component;
+    import net.minecraft.world.InteractionHand;
+    import net.minecraft.world.InteractionResult;
+    import net.minecraft.world.MenuProvider;
+    import net.minecraft.world.entity.player.Player;
+    import net.minecraft.server.level.ServerPlayer;
+    import net.minecraft.world.level.Level;
+    import net.minecraft.world.level.block.Block;
+    import net.minecraft.world.level.block.EntityBlock;
+    import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+    import net.minecraft.world.level.block.entity.BlockEntity;
+    import net.minecraft.world.level.block.state.BlockState;
+    import net.minecraft.world.level.block.state.StateDefinition;
+    import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+    import net.minecraft.world.level.block.state.properties.DirectionProperty;
+    import net.minecraft.world.phys.BlockHitResult;
+    import net.minecraftforge.network.NetworkHooks;
+
+    public class RunwaySignBlock extends HorizontalDirectionalBlock implements EntityBlock {
+        public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+
+        public RunwaySignBlock(Properties properties) {
+            super(properties);
+            this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
+        }
+
+        @Override
+        protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+            builder.add(FACING);
+        }
+
+        @Override
+        public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+            return new RunwaySignBlockEntity(pos, state);
+        }
+
+        @Override
+        public InteractionResult use(BlockState state, Level level, BlockPos pos,
+                                 Player player, InteractionHand hand, BlockHitResult hit) {
+
+            if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+                BlockEntity be = level.getBlockEntity(pos);
+                if (be instanceof MenuProvider provider) {
+                    NetworkHooks.openScreen(serverPlayer, provider, buf -> {
+                        buf.writeBlockPos(pos);
+                    });
+                }
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+    }
+    renderer:
+    package com.rslover521.airportassetsmod.client.renderer;
+
+    import com.mojang.blaze3d.vertex.PoseStack;
+    import com.mojang.math.Axis;
+    import com.rslover521.airportassetsmod.blockentity.RunwaySignBlockEntity;
+    import net.minecraft.client.Minecraft;
+    import net.minecraft.client.gui.Font;
+    import net.minecraft.client.renderer.MultiBufferSource;
+    import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+    import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+    import net.minecraft.core.Direction;
+    import net.minecraft.network.chat.Component;
+    import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+    import net.minecraft.world.level.block.state.BlockState;
+
+    public class RunwaySignRenderer implements BlockEntityRenderer<RunwaySignBlockEntity> {
+        public RunwaySignRenderer(BlockEntityRendererProvider.Context ctx) {
+        }
+
+        @Override
+        public void render(RunwaySignBlockEntity sign, float partialTicks, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+            String text = sign.getRunway();
+            if (text == null || text.isEmpty()) return;
+
+            poseStack.pushPose();
+
+            // position: center of block, Y around 10/16f (matches model)
+            poseStack.translate(0.5, 10f/16f, 0.5);
+
+            BlockState state = sign.getBlockState();
+            Direction dir = state.getValue(HorizontalDirectionalBlock.FACING);
+
+            float yRot;
+            switch (dir) {
+                case NORTH -> yRot = 180f;
+                case WEST  -> yRot = 90f;
+                case EAST  -> yRot = 270f;
+                default    -> yRot = 0f;
+            }
+            poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(yRot));
+
+            // nudge forward so text doesn't Z-fight with model face
+            poseStack.translate(0, 0, -0.502);
+
+            // scale for readable size
+            float scale = 0.025f * 1.8f;
+            poseStack.scale(scale, -scale, scale);
+
+            Font font = Minecraft.getInstance().font;
+            float width = font.width(text);
+
+            // drawInBatch wants a Component (not a raw String) and DisplayMode enum
+            font.drawInBatch(
+                    Component.literal(text),
+                    -width / 2f,
+                    0f,
+                    0xFFFFFFFF,
+                    false,
+                    poseStack.last().pose(),
+                    bufferSource,
+                    Font.DisplayMode.NORMAL,
+                    0,
+                    packedLight
+            );
+
+            poseStack.popPose();
+        }
+
+    }
+    screen (client-side):
+    package com.rslover521.airportassetsmod.client.screen;
+
+    import com.rslover521.airportassetsmod.menu.RunwaySignMenu;
+    import com.rslover521.airportassetsmod.network.NetworkHandler;
+    import com.rslover521.airportassetsmod.network.RunwaySignUpdatePacket;
+    import net.minecraft.client.gui.GuiGraphics;
+    import net.minecraft.client.gui.components.Button;
+    import net.minecraft.client.gui.components.EditBox;
+    import net.minecraft.client.gui.screens.Screen;
+    import net.minecraft.client.gui.screens.inventory.MenuAccess;
+    import net.minecraft.network.chat.Component;
+    import net.minecraft.world.entity.player.Inventory;
+
+    import java.util.regex.Pattern;
+
+    public class RunwaySignScreen extends Screen implements MenuAccess<RunwaySignMenu> {
+
+        private static final Pattern VALID = Pattern.compile("^(0[1-9]|[1-3][0-9])(L|R|C)?$");
+
+        private final RunwaySignMenu menu;
+        private EditBox input;
+
+        public RunwaySignScreen(RunwaySignMenu menu, Inventory inv, Component title) {
+            super(title);
+            this.menu = menu;
+        }
+
+        @Override
+        protected void init() {
+            super.init();
+
+            int centerX = this.width / 2;
+            int centerY = this.height / 2;
+
+            // Input text box
+            input = new EditBox(this.font, centerX - 70, centerY - 20, 140, 18, Component.literal("Runway"));
+            input.setMaxLength(3);
+            input.setFocused(true);
+            this.addRenderableWidget(input);
+
+            // DONE button
+            this.addRenderableWidget(
+                    Button.builder(Component.literal("Done"), b -> {
+                        String text = input.getValue().toUpperCase().trim();
+
+                        if (VALID.matcher(text).matches()) {
+                            NetworkHandler.CHANNEL.sendToServer(
+                                    new RunwaySignUpdatePacket(menu.getBlockEntity().getBlockPos(), text)
+                            );
+                            onClose();
+                        } else {
+                            input.setValue("");
+                        }
+                    }).bounds(centerX + 10, centerY + 10, 80, 20).build()
+            );
+
+            // CANCEL button
+            this.addRenderableWidget(
+                    Button.builder(Component.literal("Cancel"), b -> onClose())
+                            .bounds(centerX - 90, centerY + 10, 80, 20)
+                            .build()
+            );
+        }
+
+        @Override
+        public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTicks) {
+            // Darken background
+            this.renderBackground(gfx);
+
+            // Draw title BEFORE widgets
+            gfx.drawCenteredString(this.font, Component.literal("Runway Sign Editor"),
+                    this.width / 2, this.height / 2 - 70, 0xFFFFFF);
+
+            // Draw widgets
+            super.render(gfx, mouseX, mouseY, partialTicks);
+
+            // ---- PREVIEW AREA ----
+            int px = this.width / 2 - 80;
+            int py = this.height / 2 - 45;
+
+            // Sign preview rectangle (dark red)
+            gfx.fill(px, py, px + 160, py + 30, 0xCC880000); // 0xCC = alpha
+
+            // Text preview
+            String text = input.getValue().toUpperCase();
+            if (text.isEmpty()) text = "";
+
+            gfx.pose().pushPose();
+            gfx.pose().translate(this.width / 2, py + 15, 0);
+            gfx.pose().scale(1.8f, 1.8f, 1.8f);
+
+            int tw = this.font.width(text);
+            gfx.drawString(this.font, text, -tw / 2, -4, 0xFFFFFFFF, false);
+
+            gfx.pose().popPose();
+        }
+
+        @Override
+        public boolean isPauseScreen() {
+            return false;
+        }
+
+        @Override
+        public RunwaySignMenu getMenu() {
+            return this.menu;
+        }
+    }
+    menu (server-side and client-side):
+    package com.rslover521.airportassetsmod.menu;
+
+    import com.rslover521.airportassetsmod.blockentity.RunwaySignBlockEntity;
+    import com.rslover521.airportassetsmod.registry.ModMenus;
+    import net.minecraft.core.BlockPos;
+    import net.minecraft.network.FriendlyByteBuf;
+    import net.minecraft.world.entity.player.Inventory;
+    import net.minecraft.world.entity.player.Player;
+    import net.minecraft.world.inventory.AbstractContainerMenu;
+    import net.minecraft.world.inventory.MenuType;
+    import net.minecraft.world.item.ItemStack;
+    import net.minecraftforge.network.IContainerFactory;
+
+    public class RunwaySignMenu extends AbstractContainerMenu {
+        private final RunwaySignBlockEntity blockEntity;
+
+        public RunwaySignMenu(int id, Inventory inv, RunwaySignBlockEntity be) {
+            super(ModMenus.RUNWAY_SIGN.get(), id);
+            this.blockEntity = be;
+        }
+
+        // Factory method for network
+        public static RunwaySignMenu fromNetwork(int id, Inventory inv, FriendlyByteBuf buf) {
+            BlockPos pos = buf.readBlockPos();
+            RunwaySignBlockEntity be = (RunwaySignBlockEntity) inv.player.level().getBlockEntity(pos);
+            return new RunwaySignMenu(id, inv, be);
+        }
+
+        public RunwaySignBlockEntity getBlockEntity() {
+            return blockEntity;
+        }
+
+        @Override
+        public ItemStack quickMoveStack(Player p_38941_, int p_38942_) {
+            return null;
+        }
+
+        @Override
+        public boolean stillValid(Player p_38874_) {
+            return false;
+        }
+    }
+    network handler:
+    package com.rslover521.airportassetsmod.network;
+
+    import com.rslover521.airportassetsmod.AirportAssetsMod;
+    import net.minecraft.resources.ResourceLocation;
+    import net.minecraftforge.network.NetworkRegistry;
+    import net.minecraftforge.network.simple.SimpleChannel;
+
+    public class NetworkHandler {
+        private static final String PROTOCOL = "1";
+        public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
+                .named(ResourceLocation.fromNamespaceAndPath(AirportAssetsMod.MODID, "main"))
+                .clientAcceptedVersions(PROTOCOL::equals)
+                .serverAcceptedVersions(PROTOCOL::equals)
+                .networkProtocolVersion(() -> PROTOCOL)
+                .simpleChannel();
+
+        private static int id = 0;
+        public static int id() { return id++; }
+
+        public static void registerMessages() {
+            CHANNEL.registerMessage(id(), RunwaySignUpdatePacket.class,
+                    RunwaySignUpdatePacket::encode,
+                    RunwaySignUpdatePacket::decode,
+                    RunwaySignUpdatePacket::handle);
+        }
+    }
+    update packet:
+    package com.rslover521.airportassetsmod.network;
+
+    import com.rslover521.airportassetsmod.blockentity.RunwaySignBlockEntity;
+    import net.minecraft.client.Minecraft;
+    import net.minecraft.core.BlockPos;
+    import net.minecraft.network.FriendlyByteBuf;
+    import net.minecraftforge.network.NetworkEvent;
+
+    import java.util.function.Supplier;
+
+    public class RunwaySignUpdatePacket {
+        private final BlockPos pos;
+        private final String text;
+
+        public RunwaySignUpdatePacket(BlockPos pos, String text) {
+            this.pos = pos;
+            this.text = text;
+        }
+
+        public static void encode(RunwaySignUpdatePacket pkt, FriendlyByteBuf buf) {
+            buf.writeBlockPos(pkt.pos);
+            buf.writeUtf(pkt.text);
+        }
+
+        public static RunwaySignUpdatePacket decode(FriendlyByteBuf buf) {
+            BlockPos pos = buf.readBlockPos();
+            String text = buf.readUtf(32767);
+            return new RunwaySignUpdatePacket(pos, text);
+        }
+
+        public static void handle(RunwaySignUpdatePacket msg, Supplier<NetworkEvent.Context> sup) {
+            NetworkEvent.Context ctx = sup.get();
+
+            ctx.enqueueWork(() -> {
+                if (ctx.getSender() != null) {
+                    var player = ctx.getSender();
+                    var level = player.level();
+                    var be = level.getBlockEntity(msg.pos);
+                    if (be instanceof RunwaySignBlockEntity sign) {
+                        sign.setRunway(msg.text);
+                    }
+                } else {
+                    var level = Minecraft.getInstance().level;
+                    if (level == null) return;
+                    var be = level.getBlockEntity(msg.pos);
+                    if (be instanceof RunwaySignBlockEntity sign) {
+                        sign.setRunway(msg.text);
+                    }
+                }
+            });
+
+            ctx.setPacketHandled(true);
+        }
+    }
+    ModMenus class:
+    package com.rslover521.airportassetsmod.registry;
+
+    import com.rslover521.airportassetsmod.AirportAssetsMod;
+    import com.rslover521.airportassetsmod.menu.RunwaySignMenu;
+    import net.minecraft.world.inventory.MenuType;
+    import net.minecraftforge.common.extensions.IForgeMenuType;
+    import net.minecraftforge.eventbus.api.IEventBus;
+    import net.minecraftforge.registries.DeferredRegister;
+    import net.minecraftforge.registries.ForgeRegistries;
+    import net.minecraftforge.registries.RegistryObject;
+
+    public class ModMenus {
+
+        public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(
+                ForgeRegistries.MENU_TYPES, AirportAssetsMod.MODID
+        );
+
+        public static final RegistryObject<MenuType<RunwaySignMenu>> RUNWAY_SIGN = MENUS.register(
+                "runway_sign", () -> IForgeMenuType.create(RunwaySignMenu::fromNetwork)
+        );
+
+        public static void register(IEventBus eventBus) {
+            MENUS.register(eventBus);
+        }
+    }
+    The frequent issues i have now is that either when i right clicked the sign, it shows an error message of "No Menu is currently avaliable.", or if it opened successfully, it won't show up on the sign (maybe a problem with network packet, i have no clue..). Can you help me fix it?
