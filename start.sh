@@ -1,9 +1,15 @@
 # PLEASE READ THIS BEFORE YOU DO ANYTHING:
 # --------------------------------------------------------------------------------------------
+# Run this script to launch minecraft in a virtual desktop, run stop.sh if you want to stop
+# 
 # To run this script, type the following code in the terminal:
-# chmod +x start-xpra-mc.sh
-# ./start-xpra-mc.sh
-# Please email xwu053447@hsstu.lpsb.org or wulance58@gmail.com for any errors encountered 
+# chmod +x start.sh
+# ./start.sh
+#
+# To run stop.sh, type the following code in the terminal:
+# chmod +x stop.sh
+# ./stop.sh
+# Please email wulance58@gmail.com for any errors encountered 
 # during the build or create an issue directly on github. Link to the issue page: 
 # https://github.com/RSlover52111/ForgeProject/issues
 # --------------------------------------------------------------------------------------------
@@ -18,10 +24,12 @@ XPRA_DISPLAY=":100"
 XPRA_PORT=8080
 
 # -----------------------------
-# 0. Ensure Xpra is installed
+# 0. Install Xpra
 # -----------------------------
 if ! command -v xpra &> /dev/null; then
-  echo "📦 Installing Xpra..."
+  echo "--------------------------"
+  echo " 📦 Installing Xpra... "
+  echo "---------------------------" 
   sudo apt-get update
   sudo apt-get install -y xpra
   # Add Xpra signing key
@@ -39,12 +47,17 @@ if ! command -v xpra &> /dev/null; then
   sudo apt-get install xpra
 fi
 
+echo "--------------------------------"
+echo " 📦 Installing lxterminal..."
+echo "--------------------------------"
 sudo apt-get install lxterminal
 
 # -----------------------------
 # 1. Clean up old sessions
 # -----------------------------
+echo "------------------------------------------------"
 echo "🧹 Cleaning old Xpra and Sunshine sessions..."
+echo "------------------------------------------------"
 xpra stop $XPRA_DISPLAY || true
 pkill -f sunshine || true
 sleep 2
@@ -54,17 +67,23 @@ sleep 2
 # ------------------------------------------
 # Try lxterminal, fallback to xterm if missing
 
+echo "----------------------------------------------------"
+echo " 🚀 Launching Xpra virtual desktop and Minecraft..."
+echo "----------------------------------------------------"
+
 if command -v lxterminal &>/dev/null; then
     TERMINAL="lxterminal"
-    echo "✅ LXTerminal found, launching LXTerminal inside Xpra display."
+    echo "✅ LXTerminal found, launching LXTerminal inside Xpra display..."
 else
-    echo "⚠️ LXTerminal not found. Falling back to xterminal (xterm)"
-    sudo apt-get install -y xterm
-    TERMINAL="xterm"
+    echo "❌ LXTerminal not found / autostart failed."
+    echo "⚠ Please open terminal as directed once you opened the virtual desktop:"
+    echo "🖱 Click Start -> System Tools -> LXTerminal"
 fi
 
+echo "----------------------------------------------"
+echo " 🖥️ Starting Xpra display on $XPRA_DISPLAY ..."
+echo "----------------------------------------------"
 
-echo "🖥️ Starting Xpra display on $XPRA_DISPLAY ..."
 export DISPLAY=$XPRA_DISPLAY
 xpra start $XPRA_DISPLAY \
   --bind-tcp=0.0.0.0:8080 \
@@ -80,19 +99,23 @@ sleep 15
 # ---------------------------------
 # 3. Start Sunshine capturing Xpra
 # ---------------------------------
+echo "----------------------------------------------"
 echo "🌞 Starting Sunshine (capturing $DISPLAY)..."
+echo "----------------------------------------------"
 DISPLAY=$XPRA_DISPLAY nohup ~/sunshine/build/sunshine > /tmp/sunshine.log 2>&1 &
 
 # -----------------------------
 # 4. Done
 # -----------------------------
-echo ""
+
+echo "----------------------------------------------"
 echo "✅ Setup complete!"
 echo "👉 Open Codespaces port $XPRA_PORT for Xpra web desktop."
 echo "👉 Sunshine is running on port 47989, capturing display $XPRA_DISPLAY."
 echo "👉 Logs: /tmp/sunshine.log"
-echo "Once you opened Xpra port 8080, you need to go to the three lines on the top left corner of the screen."
-echo "Click Start -> System Tools -> LXTerminal"
-echo "And enter the following commands:"
+echo "----------------------------------------------"
+echo "Once you opened Xpra port 8080, if LXTerminal is not already opened, Click Start -> System Tools -> LXTerminal."
+echo "Then enter the following commands:"
 echo "cd Forge-Project-1.20.X"
 echo "./gradlew runClient"
+echo "----------------------------------------------"

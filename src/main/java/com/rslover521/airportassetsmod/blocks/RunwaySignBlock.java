@@ -8,6 +8,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -18,6 +19,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraftforge.network.NetworkHooks;
 
 public class RunwaySignBlock extends HorizontalDirectionalBlock implements EntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
@@ -38,17 +40,17 @@ public class RunwaySignBlock extends HorizontalDirectionalBlock implements Entit
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level world, BlockPos pos,
-                                 Player player, InteractionHand hand,
-                                 BlockHitResult hit) {
-        if(!world.isClientSide) {
-            BlockEntity be = world.getBlockEntity(pos);
-            if(be instanceof MenuProvider provider) {
-                player.openMenu(provider);
-            } else {
-                player.displayClientMessage(Component.literal("No menu available"), true);
+    public InteractionResult use(BlockState state, Level level, BlockPos pos,
+                             Player player, InteractionHand hand, BlockHitResult hit) {
+
+        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof MenuProvider provider) {
+                NetworkHooks.openScreen(serverPlayer, provider, buf -> {
+                    buf.writeBlockPos(pos);
+                });
             }
         }
-        return InteractionResult.sidedSuccess(world.isClientSide);
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 }

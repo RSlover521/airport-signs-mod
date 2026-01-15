@@ -1,6 +1,7 @@
 package com.rslover521.airportassetsmod.network;
 
 import com.rslover521.airportassetsmod.blockentity.RunwaySignBlockEntity;
+import com.rslover521.airportassetsmod.menu.RunwaySignMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -34,12 +35,10 @@ public class RunwaySignUpdatePacket {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
-            if(player == null) return;
-            Level level = player.level();
-            BlockEntity be = level.getBlockEntity(pkt.pos);
-            if(be instanceof RunwaySignBlockEntity sign) {
-                sign.setRunway(pkt.text);
-                level.sendBlockUpdated(pkt.pos, level.getBlockState(pkt.pos), level.getBlockState(pkt.pos), 3);
+            if (player == null) return;
+
+            if (player.containerMenu instanceof RunwaySignMenu menu) {
+                menu.setRunway(player, pkt.text);
             }
         });
         ctx.setPacketHandled(true);
