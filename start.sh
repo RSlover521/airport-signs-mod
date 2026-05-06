@@ -18,6 +18,9 @@
 #!/usr/bin/env bash
 set -e
 
+echo "🔨 Building Mod..."
+./gradlew build
+
 echo "🎮 Launching Minecraft with Sunshine streaming..."
 
 MC_DIR="workspaces/ForgeProject/Forge-Project-1.20.X"
@@ -109,6 +112,7 @@ DISPLAY=$XPRA_DISPLAY nohup ~/sunshine/build/sunshine > /tmp/sunshine.log 2>&1 &
 # 4. Done
 # -----------------------------
 
+echo "\n"
 echo "----------------------------------------------"
 echo "✅ Setup complete!"
 echo "👉 Open Codespaces port $XPRA_PORT for Xpra web desktop."
