@@ -9,6 +9,7 @@
 # To run stop.sh, type the following code in the terminal:
 # chmod +x stop.sh
 # ./stop.sh
+# 
 # Please email wulance58@gmail.com for any errors encountered 
 # during the build or create an issue directly on github. Link to the issue page: 
 # https://github.com/RSlover52111/ForgeProject/issues
@@ -16,6 +17,9 @@
 
 #!/usr/bin/env bash
 set -e
+
+echo "🔨 Building Mod..."
+./gradlew build
 
 echo "🎮 Launching Minecraft with Sunshine streaming..."
 
@@ -108,6 +112,7 @@ DISPLAY=$XPRA_DISPLAY nohup ~/sunshine/build/sunshine > /tmp/sunshine.log 2>&1 &
 # 4. Done
 # -----------------------------
 
+echo "\n"
 echo "----------------------------------------------"
 echo "✅ Setup complete!"
 echo "👉 Open Codespaces port $XPRA_PORT for Xpra web desktop."
